@@ -1,14 +1,14 @@
-use sfml::graphics::{
-    Color, Rect, RectangleShape, RenderStates, RenderTarget, RenderWindow, Shape, Transformable,
+use rand::Rng;
+use sfml::{
+    graphics::{
+        Color, Rect, RectangleShape, RenderStates, RenderTarget, RenderWindow, Shape, Transformable,
+    },
+    system::Vector2f,
 };
-use sfml::system::Vector2f;
 
-
-
-
-
-const QUAD_CAPACITY: usize = 4; // Amount of children a quad can store
-
+const WIN_W: u32 = 800;
+const WIN_H: u32 = 600;
+const MAX_D: u8 = 8;
 
 #[derive(Debug, Default, Clone)]
 struct Quadtree {
@@ -16,25 +16,36 @@ struct Quadtree {
     is_div: bool,
     capacity: usize,
     children: Vec<Vector2f>,
-    quads: Vec<Quadtree>,
+    quads: Option<Vec<Quadtree>>,
 }
 
+// Core impl for Quadtree is here, other stuff is below in a 2nd impl for everything else
 impl Quadtree {
+    fn new() -> Quadtree {
+        Quadtree {
+            bounds: Rect::new(0.0, 0.0, WIN_W as f32, WIN_H as f32),
+            is_div: false,
+            capacity: 4,
+            children: vec![Vector2f::default(); 4],
+            quads: None,
+        }
+    }
+
     fn insert(&mut self, location: Vector2f) -> bool {
         if !self.bounds.contains(location) {
             return false;
         }
-    
-        if self.children.len() < self.capacity && !self.is_div {
+
+        if self.children.len() < self.capacity && self.quads.is_none(){
             self.children.push(location);
             return true;
         }
 
-        if !self.is_div {
+        if self.quads.is_none() {
             self.divide();
         }
 
-        for quad in self.quads.iter_mut() {
+        for quad in self.quads.as_mut().unwrap().iter_mut() {
             if quad.insert(location) {
                 return true;
             }
@@ -44,18 +55,26 @@ impl Quadtree {
     }
 
     fn divide(&mut self) {
+        if self.quads.is_some() {
+            return;
+        }
+
         let x = self.bounds.left;
         let y = self.bounds.top;
         let w = self.bounds.width / 2.0;
         let h = self.bounds.height / 2.0;
 
-        for (idx, quad) in self.quads.iter_mut().enumerate() {
+        self.quads = Some(vec![Quadtree::new(); 4]);
+
+        for (idx, quad) in self.quads.as_mut().unwrap().iter_mut().enumerate() {
             match idx {
-                0 => quad.bounds = Rect::new(x, y, w, h), // NW
-                1 => quad.bounds = Rect::new(w, y, w, h), // NE
-                2 => quad.bounds = Rect::new(w, h, w, h), // SE
-                3 => quad.bounds = Rect::new(x, h, w, h), // SW
-                _ => { panic!("More quads than quarters!"); }
+                0 => quad.bounds = Rect::new(x, y, w, h),         // NW
+                1 => quad.bounds = Rect::new(x + w, y, w, h),     // NE
+                2 => quad.bounds = Rect::new(x + w, y + h, w, h), // SE
+                3 => quad.bounds = Rect::new(x, y + h, w, h),     // SW
+                _ => {
+                    panic!("More quads than quarters!");
+                }
             }
         }
 
@@ -69,7 +88,7 @@ impl Quadtree {
             return children_in_range;
         }
 
-        for child in self.children.iter(){
+        for child in self.children.iter() {
             if range.contains(*child) {
                 children_in_range.push(*child);
             }
@@ -79,7 +98,7 @@ impl Quadtree {
             return children_in_range;
         }
 
-        for quad in self.quads.iter() {
+        for quad in self.quads.as_ref().unwrap().iter() {
             children_in_range.append(&mut quad.query(range));
         }
 
@@ -87,42 +106,54 @@ impl Quadtree {
     }
 }
 
+// Render and utility functions for Quadtree, Core stuff is above.
+impl Quadtree {
+    fn draw(&self, window: &RenderWindow) {
+        // todo: store this somewhere else
+        let mut my_rect = RectangleShape::with_size((self.bounds.width, self.bounds.height).into());
+        my_rect.set_position((self.bounds.left, self.bounds.top));
+        my_rect.set_fill_color(Color::TRANSPARENT);
+        my_rect.set_outline_color(Color::RED);
+        my_rect.set_outline_thickness(1.0);
+        window.draw_rectangle_shape(&my_rect, RenderStates::default());
+
+        // if self.children.len() > 0 {
+        //     let mut my_dot = CircleShape::new(1.0, 4);
+        //     my_dot.set_fill_color(Color::GREEN);
+
+        //     for child in &self.children {
+        //         my_dot.set_position(*child);
+        //         window.draw_circle_shape(&my_dot, RenderStates::default());
+        //     }
+        // }
+    }
+}
+
 fn main() {
-    let mut quad_root = Quadtree {
-        bounds: Rect::new(0.0, 0.0, 800.0, 600.0),
-        is_div: false,
-        capacity: QUAD_CAPACITY,
-        children: vec![Vector2f::default(); QUAD_CAPACITY],
-        quads: vec![Quadtree::default(); 4],
-    };
-    // quad_root.divide();
+    let mut random = rand::thread_rng();
 
-    dbg!(quad_root);
+    let mut quad_root = Quadtree::new();
+    
+    let mut vectors = Vec::new();
+    for _idx in 0..10 {
+        let rng_x = random.gen_range(0, WIN_W) as f32;
+        let rng_y = random.gen_range(0, WIN_H) as f32;
+        let my_vector = Vector2f::new(rng_x, rng_y);
+        vectors.push(my_vector);
+    }
 
+    for vector in vectors {
+        quad_root.insert(vector);
+    }
 
+    dbg!(&quad_root);
+    // dbg!(&quad_root.quads.as_ref().unwrap()[0].children.capacity());
+    // dbg!(&quad_root.quads.as_ref().unwrap()[0].quads.as_ref().unwrap().capacity());
 
-
-
-let my_vec: Vec<Quadtree> = Vec::with_capacity(4);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    // fixme ------------------------------------------
     // Setup
     let mut window = RenderWindow::new(
-        (800, 600),
+        (WIN_W, WIN_H),
         "Quadtree",
         sfml::window::Style::CLOSE,
         &Default::default(),
@@ -155,17 +186,13 @@ let my_vec: Vec<Quadtree> = Vec::with_capacity(4);
 
             // Draw
             {
-                let mut my_rect = RectangleShape::with_size(Vector2f::new(100.0, 100.0));
-                my_rect.set_position((10.0, 10.0));
-                my_rect.set_fill_color(Color::TRANSPARENT);
-                my_rect.set_outline_color(Color::RED);
-                my_rect.set_outline_thickness(1.0);
-                window.draw_rectangle_shape(&my_rect, RenderStates::default());
+                quad_root.draw(&window);
             }
 
             window.display();
         }
 
-        std::thread::yield_now();
+        // std::thread::yield_now();
+        std::thread::sleep(std::time::Duration::from_nanos(1));
     }
 }
