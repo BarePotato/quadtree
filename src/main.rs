@@ -7,8 +7,10 @@ use sfml::{
     system::Vector2f,
 };
 
+//----- Settings ------//
 const WIN_W: u32 = 800;
 const WIN_H: u32 = 600;
+const MAX_CAP: usize = 2;
 
 type Rect = sfml::graphics::Rect<f32>;
 
@@ -25,8 +27,8 @@ impl Quadtree {
     fn new() -> Quadtree {
         Quadtree {
             bounds: Rect::new(0.0, 0.0, WIN_W as f32, WIN_H as f32),
-            capacity: 4,
-            children: Vec::with_capacity(4),
+            capacity: MAX_CAP,
+            children: Vec::with_capacity(MAX_CAP),
             quads: None,
         }
     }
@@ -103,15 +105,16 @@ impl Quadtree {
 
         children_in_range
     }
+
+    fn _remove_nearest(&mut self, location: Vector2f) {}
 }
 
 // Render and utility functions for Quadtree, Core stuff is above.
 impl Quadtree {
     fn draw(&self, window: &RenderWindow) {
-        let mut my_rect = RectangleShape::with_size(
-            (self.bounds.width - 2 as f32, self.bounds.height - 2 as f32).into(),
-        );
-        my_rect.set_position((self.bounds.left + 1 as f32, self.bounds.top + 1 as f32));
+        let mut my_rect =
+            RectangleShape::with_size((self.bounds.width as f32, self.bounds.height as f32).into());
+        my_rect.set_position((self.bounds.left as f32, self.bounds.top as f32));
         my_rect.set_fill_color(Color::TRANSPARENT);
         my_rect.set_outline_color(Color::RED);
         my_rect.set_outline_thickness(1.0);
@@ -136,27 +139,24 @@ impl Quadtree {
 }
 
 fn main() {
-    let mut random = rand::thread_rng();
-
     let mut quad_root = Quadtree::new();
 
-    let mut vectors = Vec::new();
-    for _idx in 0..10000 {
-        let rng_x = random.gen_range(0, WIN_W) as f32;
-        let rng_y = random.gen_range(0, WIN_H) as f32;
-        let my_vector = Vector2f::new(rng_x, rng_y);
-        vectors.push(my_vector);
+    {
+        // Random points for testing.
+        let mut random = rand::thread_rng();
+        let mut vectors = Vec::new();
+        for _idx in 0..1000 {
+            let rng_x = random.gen_range(0, WIN_W) as f32;
+            let rng_y = random.gen_range(0, WIN_H) as f32;
+            let my_vector = Vector2f::new(rng_x, rng_y);
+            vectors.push(my_vector);
+        }
+
+        for vector in vectors {
+            quad_root.insert(vector);
+        }
     }
 
-    for vector in vectors {
-        quad_root.insert(vector);
-    }
-
-    // dbg!(&quad_root);
-    // dbg!(&quad_root.quads.as_ref().unwrap()[0].children.capacity());
-    // dbg!(&quad_root.quads.as_ref().unwrap()[0].quads.as_ref().unwrap().capacity());
-
-    // fixme ------------------------------------------
     // Setup
     let mut window = RenderWindow::new(
         (WIN_W, WIN_H),
