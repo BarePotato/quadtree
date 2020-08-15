@@ -1,19 +1,20 @@
 use rand::Rng;
 use sfml::{
     graphics::{
-        Color, Rect, RectangleShape, RenderStates, RenderTarget, RenderWindow, Shape, Transformable,
+        CircleShape, Color, RectangleShape, RenderStates, RenderTarget, RenderWindow, Shape,
+        Transformable,
     },
     system::Vector2f,
 };
 
 const WIN_W: u32 = 800;
 const WIN_H: u32 = 600;
-const MAX_D: u8 = 8;
+
+type Rect = sfml::graphics::Rect<f32>;
 
 #[derive(Debug, Default, Clone)]
 struct Quadtree {
-    bounds: Rect<f32>,
-    is_div: bool,
+    bounds: Rect,
     capacity: usize,
     children: Vec<Vector2f>,
     quads: Option<Vec<Quadtree>>,
@@ -24,9 +25,8 @@ impl Quadtree {
     fn new() -> Quadtree {
         Quadtree {
             bounds: Rect::new(0.0, 0.0, WIN_W as f32, WIN_H as f32),
-            is_div: false,
             capacity: 4,
-            children: vec![Vector2f::default(); 4],
+            children: Vec::with_capacity(4),
             quads: None,
         }
     }
@@ -36,7 +36,7 @@ impl Quadtree {
             return false;
         }
 
-        if self.children.len() < self.capacity && self.quads.is_none(){
+        if self.children.len() < self.capacity && self.quads.is_none() {
             self.children.push(location);
             return true;
         }
@@ -66,6 +66,7 @@ impl Quadtree {
 
         self.quads = Some(vec![Quadtree::new(); 4]);
 
+        // todo: better way to do this?
         for (idx, quad) in self.quads.as_mut().unwrap().iter_mut().enumerate() {
             match idx {
                 0 => quad.bounds = Rect::new(x, y, w, h),         // NW
@@ -77,11 +78,9 @@ impl Quadtree {
                 }
             }
         }
-
-        self.is_div = true;
     }
 
-    fn query(&self, range: Rect<f32>) -> Vec<Vector2f> {
+    fn _query(&self, range: Rect) -> Vec<Vector2f> {
         let mut children_in_range = Vec::new();
 
         if self.bounds.intersection(&range).is_none() {
@@ -94,12 +93,12 @@ impl Quadtree {
             }
         }
 
-        if !self.is_div {
+        if self.quads.is_none() {
             return children_in_range;
         }
 
         for quad in self.quads.as_ref().unwrap().iter() {
-            children_in_range.append(&mut quad.query(range));
+            children_in_range.append(&mut quad._query(range));
         }
 
         children_in_range
@@ -109,23 +108,30 @@ impl Quadtree {
 // Render and utility functions for Quadtree, Core stuff is above.
 impl Quadtree {
     fn draw(&self, window: &RenderWindow) {
-        // todo: store this somewhere else
-        let mut my_rect = RectangleShape::with_size((self.bounds.width, self.bounds.height).into());
-        my_rect.set_position((self.bounds.left, self.bounds.top));
+        let mut my_rect = RectangleShape::with_size(
+            (self.bounds.width - 2 as f32, self.bounds.height - 2 as f32).into(),
+        );
+        my_rect.set_position((self.bounds.left + 1 as f32, self.bounds.top + 1 as f32));
         my_rect.set_fill_color(Color::TRANSPARENT);
         my_rect.set_outline_color(Color::RED);
         my_rect.set_outline_thickness(1.0);
         window.draw_rectangle_shape(&my_rect, RenderStates::default());
 
-        // if self.children.len() > 0 {
-        //     let mut my_dot = CircleShape::new(1.0, 4);
-        //     my_dot.set_fill_color(Color::GREEN);
+        if self.quads.is_some() {
+            for quad in self.quads.as_ref().unwrap().iter() {
+                quad.draw(window);
+            }
+        }
 
-        //     for child in &self.children {
-        //         my_dot.set_position(*child);
-        //         window.draw_circle_shape(&my_dot, RenderStates::default());
-        //     }
-        // }
+        if self.children.len() > 0 {
+            let mut my_dot = CircleShape::new(1.0, 8);
+            my_dot.set_fill_color(Color::GREEN);
+
+            for child in &self.children {
+                my_dot.set_position(*child);
+                window.draw_circle_shape(&my_dot, RenderStates::default());
+            }
+        }
     }
 }
 
@@ -133,9 +139,9 @@ fn main() {
     let mut random = rand::thread_rng();
 
     let mut quad_root = Quadtree::new();
-    
+
     let mut vectors = Vec::new();
-    for _idx in 0..10 {
+    for _idx in 0..10000 {
         let rng_x = random.gen_range(0, WIN_W) as f32;
         let rng_y = random.gen_range(0, WIN_H) as f32;
         let my_vector = Vector2f::new(rng_x, rng_y);
@@ -146,7 +152,7 @@ fn main() {
         quad_root.insert(vector);
     }
 
-    dbg!(&quad_root);
+    // dbg!(&quad_root);
     // dbg!(&quad_root.quads.as_ref().unwrap()[0].children.capacity());
     // dbg!(&quad_root.quads.as_ref().unwrap()[0].quads.as_ref().unwrap().capacity());
 
