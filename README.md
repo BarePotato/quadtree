@@ -1,4 +1,9 @@
-# quadtree
+Currently shifting this to a library.  
+This entails not leaning on SFML's provided rect/point/vector functionality and instead creating our own.  
+The parts already in use have been switched to remain funcitonal, namely Rect and Vector2.  
+See issues for outstanding things.
+
+# quadtree - below is still valid until it is removed from the readme as for running main.rs
 
 - SFML 2.5 and CSFML 2.5 must be installed on your computer. You can download them here:
 
