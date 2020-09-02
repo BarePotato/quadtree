@@ -1,9 +1,6 @@
-use sfml::{
-    graphics::{
-        CircleShape, Color, RectangleShape, RenderStates, RenderTarget, RenderWindow, Shape,
-        Transformable,
-    },
-    system::Vector2f,
+use sfml::graphics::{
+    CircleShape, Color, RectangleShape, RenderStates, RenderTarget, RenderWindow, Shape,
+    Transformable,
 };
 
 use quadtree::{self, Quadtree};
@@ -17,7 +14,7 @@ trait Drawable {
     fn draw(&self, window: &mut RenderWindow);
 }
 
-impl Drawable for Quadtree {
+impl Drawable for Quadtree<f32> {
     fn draw(&self, window: &mut RenderWindow) {
         if self.quads.is_none() && self.capacity <= 0 {
             return;
@@ -52,7 +49,7 @@ impl Drawable for Quadtree {
             my_dot.set_fill_color(my_color);
 
             for child in &self.children {
-                my_dot.set_position(Vector2f::from((child.x, child.y)));
+                my_dot.set_position((child.x.into(), child.y.into()));
                 window.draw_circle_shape(&my_dot, RenderStates::default());
             }
         }

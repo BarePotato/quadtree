@@ -1,4 +1,7 @@
-#[derive(Debug, Default, Clone, Copy, Ord, PartialOrd, Eq, PartialEq)]
+pub use num_traits::float::Float;
+pub use std::ops::{Add, Div, Sub};
+
+#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq)]
 pub struct Vector2<T> {
     pub x: T,
     pub y: T,
@@ -12,7 +15,7 @@ impl<T> Vector2<T> {
 
 pub type Vector2f = Vector2<f32>;
 
-#[derive(Debug, Default, Clone, Copy, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq)]
 pub struct Rect<T> {
     pub left: T,
     pub top: T,
@@ -20,7 +23,7 @@ pub struct Rect<T> {
     pub height: T,
 }
 
-impl<T> Rect<T> {
+impl<T: Float + PartialOrd + Add<Output = T> + Sub<Output = T> + Copy> Rect<T> {
     pub fn new(left: T, top: T, width: T, height: T) -> Self {
         Rect {
             left,
@@ -38,9 +41,7 @@ impl<T> Rect<T> {
             height: size.y,
         }
     }
-}
 
-impl<T: PartialOrd + std::ops::Add<Output = T> + std::ops::Sub<Output = T> + Copy> Rect<T> {
     pub fn contains(self, position: Vector2<T>) -> bool {
         let x = position.x;
         let y = position.y;
@@ -104,17 +105,25 @@ fn max<T: PartialOrd>(i: T, n: T) -> T {
     }
 }
 
-#[derive(Debug, Default, Clone)]
-pub struct Quadtree {
-    pub bounds: Rect<f32>,
+#[derive(Debug, Clone)]
+pub struct Quadtree<T> {
+    pub bounds: Rect<T>,
     pub capacity: usize,
     max_capacity: usize,
-    pub children: Vec<Vector2f>,
-    pub quads: Option<Vec<Quadtree>>,
+    pub children: Vec<Vector2<T>>,
+    pub quads: Option<Vec<Quadtree<T>>>,
 }
 
-impl Quadtree {
-    pub fn new(bounds: Rect<f32>, capacity: usize) -> Self {
+#[derive(Debug, Clone)]
+struct PointIndex<T> {
+    position: Vector2<T>,
+    index: usize,
+}
+
+impl<T: Float + PartialOrd + Add<Output = T> + Sub<Output = T> + Div<Output = T> + Copy>
+    Quadtree<T>
+{
+    pub fn new(bounds: Rect<T>, capacity: usize) -> Self {
         Quadtree {
             bounds,
             capacity,
@@ -124,7 +133,7 @@ impl Quadtree {
         }
     }
 
-    pub fn set_bounds(mut self, bounds: Rect<f32>) -> Self {
+    pub fn set_bounds(mut self, bounds: Rect<T>) -> Self {
         self.bounds = bounds;
 
         self
@@ -143,7 +152,7 @@ impl Quadtree {
         self
     }
 
-    pub fn insert(&mut self, location: Vector2f) -> bool {
+    pub fn insert(&mut self, location: Vector2<T>) -> bool {
         if !self.bounds.contains(location) {
             return false;
         }
@@ -173,8 +182,8 @@ impl Quadtree {
 
         let x = self.bounds.left;
         let y = self.bounds.top;
-        let w = self.bounds.width / 2.0;
-        let h = self.bounds.height / 2.0;
+        let w = self.bounds.width / T::from(2.0).unwrap();
+        let h = self.bounds.height / T::from(2.0).unwrap();
 
         self.quads = Some(vec![Quadtree::new(self.bounds, self.max_capacity); 4]);
 
