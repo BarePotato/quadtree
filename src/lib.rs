@@ -56,6 +56,36 @@ impl<T: PartialOrd + std::ops::Add<Output = T> + std::ops::Sub<Output = T> + Cop
         // <= ?
         x >= min_x && x < max_x && y >= min_y && y < max_y
     }
+
+    pub fn overlap(self, rect: Rect<T>) -> Option<Rect<T>> {
+        let (s_min_x, s_max_x) = (
+            min(self.left, self.left + self.width),
+            max(self.left, self.left + self.width),
+        );
+        let (s_min_y, s_max_y) = (
+            min(self.top, self.top + self.height),
+            max(self.top, self.top + self.height),
+        );
+        let (r_min_x, r_max_x) = (
+            min(rect.left, rect.left + rect.width),
+            max(rect.left, rect.left + rect.width),
+        );
+        let (r_min_y, r_max_y) = (
+            min(rect.top, rect.top + rect.height),
+            max(rect.top, rect.top + rect.height),
+        );
+
+        let left = max(s_min_x, r_min_x);
+        let top = max(s_min_y, r_min_y);
+        let right = min(s_max_x, r_max_x);
+        let bottom = min(s_max_y, r_max_y);
+
+        if left < right && top < bottom {
+            return Some(Rect::new(left, top, right - left, top - bottom));
+        }
+
+        None
+    }
 }
 
 fn min<T: PartialOrd>(i: T, n: T) -> T {
