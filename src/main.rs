@@ -3,7 +3,7 @@ use sfml::graphics::{
     Transformable,
 };
 
-use quadtree::{self, Quadtree};
+use quadtree::{self, PointIndex, Quadtree};
 
 //----- Settings ------//
 const WIN_W: f32 = 800.0;
@@ -49,7 +49,7 @@ impl Drawable for Quadtree<f32> {
             my_dot.set_fill_color(my_color);
 
             for child in &self.children {
-                my_dot.set_position((child.x.into(), child.y.into()));
+                my_dot.set_position((child.position.x.into(), child.position.y.into()));
                 window.draw_circle_shape(&my_dot, RenderStates::default());
             }
         }
@@ -99,7 +99,10 @@ fn main() {
             for _idx in 0..500 {
                 let rng_x = normal_w.sample(random) as f32;
                 let rng_y = normal_h.sample(random) as f32;
-                let my_vector = quadtree::Vector2f::new(rng_x, rng_y);
+                let my_vector = PointIndex {
+                    position: quadtree::Vector2f::new(rng_x, rng_y),
+                    index: None,
+                };
                 vectors.push(my_vector);
             }
 

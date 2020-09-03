@@ -110,14 +110,14 @@ pub struct Quadtree<T> {
     pub bounds: Rect<T>,
     pub capacity: usize,
     max_capacity: usize,
-    pub children: Vec<Vector2<T>>,
+    pub children: Vec<PointIndex<T>>,
     pub quads: Option<Vec<Quadtree<T>>>,
 }
 
-#[derive(Debug, Clone)]
-struct PointIndex<T> {
-    position: Vector2<T>,
-    index: usize,
+#[derive(Debug, Copy, Clone)]
+pub struct PointIndex<T> {
+    pub position: Vector2<T>,
+    pub index: Option<usize>,
 }
 
 impl<T: Float + PartialOrd + Add<Output = T> + Sub<Output = T> + Div<Output = T> + Copy>
@@ -152,8 +152,8 @@ impl<T: Float + PartialOrd + Add<Output = T> + Sub<Output = T> + Div<Output = T>
         self
     }
 
-    pub fn insert(&mut self, location: Vector2<T>) -> bool {
-        if !self.bounds.contains(location) {
+    pub fn insert(&mut self, location: PointIndex<T>) -> bool {
+        if !self.bounds.contains(location.position) {
             return false;
         }
 
@@ -226,7 +226,7 @@ impl<T: Float + PartialOrd + Add<Output = T> + Sub<Output = T> + Div<Output = T>
     //     children_in_range
     // }
 
-    fn _remove_nearest(&mut self, _location: Vector2f) {}
+    // fn _remove_nearest(&mut self, _location: Vector2f) {}
 
     pub fn clear(&mut self) {
         self.children.clear();
